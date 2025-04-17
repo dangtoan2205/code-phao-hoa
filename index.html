@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đếm ngược đến năm 2026</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #f5f5d5, #d3d3b0);
+      color: #8b4513;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+    }
+    .countdown {
+      display: flex;
+      gap: 20px;
+      font-size: 3em;
+      font-weight: bold;
+    }
+    .countdown div {
+      display: flex;
+      flex-direction: column;
+    }
+    .countdown span {
+      font-size: 0.4em;
+      font-weight: normal;
+      color: #555;
+    }
+    .current-time {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+    .train {
+      margin-top: 30px;
+      width: 200px;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: none;
+      background: linear-gradient(to bottom, #1e3c72, #2a5298); /* Night sky gradient */
+    }
+  </style>
+</head>
+<body>
+  <h1>Chuyến tàu "2026", sẽ khởi hành sau...</h1>
+  <div class="countdown">
+    <div><div id="days">00</div><span>NGÀY</span></div>
+    <div><div id="hours">00</div><span>GIỜ</span></div>
+    <div><div id="minutes">00</div><span>PHÚT</span></div>
+    <div><div id="seconds">00</div><span>GIÂY</span></div>
+  </div>
+  <div class="current-time" id="current-time"></div>
+  <img class="train" src="https://img.icons8.com/emoji/200/train-emoji.png" alt="Train">
+  <canvas id="fireworks"></canvas>
+
+  <script>
+    const targetDate = new Date('2026-01-01T00:00:00');
+    const daysEl = document.getElementById('days');
+    const hoursEl = document.getElementById('hours');
+    const minutesEl = document.getElementById('minutes');
+    const secondsEl = document.getElementById('seconds');
+    const currentTimeEl = document.getElementById('current-time');
+    const canvas = document.getElementById('fireworks');
+    const ctx = canvas.getContext('2d');
+    let fireworksActive = false;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    function updateCurrentTime() {
+      const now = new Date();
+      currentTimeEl.textContent = `Thời gian hiện tại: ${now.toLocaleString('vi-VN')}`;
+    }
+
+    function updateCountdown() {
+      const now = new Date();
+      const timeDiff = targetDate - now;
+
+      if (timeDiff <= 0) {
+        daysEl.textContent = '00';
+        hoursEl.textContent = '00';
+        minutesEl.textContent = '00';
+        secondsEl.textContent = '00';
+        if (!fireworksActive) {
+          fireworksActive = true;
+          canvas.style.display = 'block';
+          startFireworks();
+        }
+        return;
+      }
+
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+      daysEl.textContent = String(days).padStart(2, '0');
+      hoursEl.textContent = String(hours).padStart(2, '0');
+      minutesEl.textContent = String(minutes).padStart(2, '0');
+      secondsEl.textContent = String(seconds).padStart(2, '0');
+    }
+
+    function startFireworks() {
+      const fireworks = [];
+      const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#ffffff', '#00ffff'];
+
+      class Firework {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.particles = [];
+          this.sparkles = [];
+          this.exploded = false;
+          this.color = colors[Math.floor(Math.random() * colors.length)];
+          this.radius = 2;
+          this.life = 1;
+          this.vy = -Math.random() * 5 - 8; // Launch upward faster
+          this.smoke = [];
+        }
+
+        explode() {
+          this.exploded = true;
+          const particleCount = 120; // More particles for a fuller burst
+          for (let i = 0; i < particleCount; i++) {
+            const angle = (Math.PI * 2 * i) / particleCount;
+            const speed = Math.random() * 6 + 3;
+            this.particles.push({
+              x: this.x,
+              y: this.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              radius: Math.random() * 2 + 1,
+              alpha: 1,
+              color: this.color,
+            });
+          }
+          // Add sparkles
+          const sparkleCount = 30;
+          for (let i = 0; i < sparkleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 2 + 1;
+            this.sparkles.push({
+              x: this.x,
+              y: this.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              radius: Math.random() * 1 + 0.5,
+              alpha: 1,
+              color: '#ffffff',
+              blink: Math.random() * 0.05 + 0.02, // Blinking speed
+            });
+          }
+        }
+
+        update() {
+          if (!this.exploded) {
+            this.y += this.vy;
+            this.vy += 0.1; // Gravity
+            // Add smoke trail during ascent
+            if (Math.random() < 0.3) {
+              this.smoke.push({
+                x: this.x,
+                y: this.y,
+                radius: Math.random() * 3 + 2,
+                alpha: 0.3,
+              });
+            }
+            if (this.vy >= 0) {
+              this.explode();
+            }
+          } else {
+            this.particles.forEach((particle, index) => {
+              particle.x += particle.vx;
+              particle.y += particle.vy;
+              particle.vy += 0.05; // Gravity for particles
+              particle.vx *= 0.98; // Slow down
+              particle.vy *= 0.98;
+              particle.alpha -= 0.004; // Slower fade
+              if (particle.alpha <= 0) {
+                this.particles.splice(index, 1);
+              }
+            });
+            this.sparkles.forEach((sparkle, index) => {
+              sparkle.x += sparkle.vx;
+              sparkle.y += sparkle.vy;
+              sparkle.vy += 0.03;
+              sparkle.alpha -= 0.005;
+              sparkle.alpha = Math.max(0, Math.sin(Date.now() * sparkle.blink) * sparkle.alpha); // Blinking effect
+              if (sparkle.alpha <= 0) {
+                this.sparkles.splice(index, 1);
+              }
+            });
+            this.smoke.forEach((smoke, index) => {
+              smoke.alpha -= 0.002;
+              smoke.radius += 0.1;
+              if (smoke.alpha <= 0) {
+                this.smoke.splice(index, 1);
+              }
+            });
+            this.life -= 0.004;
+          }
+        }
+
+        draw() {
+          ctx.save();
+          // Draw smoke
+          this.smoke.forEach(smoke => {
+            ctx.beginPath();
+            ctx.arc(smoke.x, smoke.y, smoke.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, ' + smoke.alpha + ')';
+            ctx.fill();
+          });
+
+          if (!this.exploded) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            // Glow for the ascending firework
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * 3, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = 0.3;
+            ctx.fill();
+          } else {
+            // Draw main particles
+            this.particles.forEach(particle => {
+              ctx.beginPath();
+              ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+              ctx.fillStyle = particle.color;
+              ctx.globalAlpha = particle.alpha;
+              ctx.fill();
+              // Glow effect
+              ctx.beginPath();
+              ctx.arc(particle.x, particle.y, particle.radius * 3, 0, Math.PI * 2);
+              ctx.fillStyle = particle.color;
+              ctx.globalAlpha = particle.alpha * 0.4;
+              ctx.fill();
+            });
+            // Draw sparkles
+            this.sparkles.forEach(sparkle => {
+              ctx.beginPath();
+              ctx.arc(sparkle.x, sparkle.y, sparkle.radius, 0, Math.PI * 2);
+              ctx.fillStyle = sparkle.color;
+              ctx.globalAlpha = sparkle.alpha;
+              ctx.fill();
+              // Glow for sparkles
+              ctx.beginPath();
+              ctx.arc(sparkle.x, sparkle.y, sparkle.radius * 2, 0, Math.PI * 2);
+              ctx.fillStyle = sparkle.color;
+              ctx.globalAlpha = sparkle.alpha * 0.5;
+              ctx.fill();
+            });
+          }
+          ctx.restore();
+        }
+      }
+
+      function animateFireworks() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Randomly create new fireworks
+        if (Math.random() < 0.05) {
+          const x = Math.random() * canvas.width * 0.6 + canvas.width * 0.2; // Center launches
+          const y = canvas.height; // Start at bottom
+          fireworks.push(new Firework(x, y));
+        }
+
+        fireworks.forEach((firework, index) => {
+          firework.update();
+          firework.draw();
+          if (firework.life <= 0 && firework.particles.length === 0 && firework.sparkles.length === 0) {
+            fireworks.splice(index, 1);
+          }
+        });
+
+        requestAnimationFrame(animateFireworks);
+      }
+
+      animateFireworks();
+    }
+
+    updateCurrentTime();
+    updateCountdown();
+    setInterval(updateCurrentTime, 1000);
+    setInterval(updateCountdown, 1000);
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
